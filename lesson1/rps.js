@@ -50,6 +50,7 @@ const VALID_CHOICES = {
   spock: { shorthand: 'sp', beats: ['scissors', 'rock'] },
 };
 const VALID_YES_OR_NO = ['yes', 'no', 'y', 'n'];
+const WINNING_SCORE = 5;
 
 function prompt(message) {
   console.log (`=> ${message}`);
@@ -69,54 +70,12 @@ function createPlayer() {
       this.score = 0;
     },
 
-    updateMove(move) {
+    updateMovesHistory(move) {
       this.historyOfMoves.push(move);
     },
   };
 }
 
-function timesMovePlayed (array, currentMove) {
-  return array.filter(move => {
-    return move === currentMove;
-  }).length;
-}
-
-function randomMove (choices) {
-  let randomIndex = Math.floor (Math.random() * choices.length);
-
-  return choices[randomIndex];
-}
-
-function weightedChoice(computerMoves, computerProbability) {
-  let choices = Object.keys(VALID_CHOICES);
-
-  Object.keys(VALID_CHOICES).forEach(move => {
-    if (computerMoves.includes(move)) {
-      if (computerProbability[move] > 50) {
-        choices.push(move);
-      }
-
-      if (computerProbability[move] > 70) {
-        choices.push(move);
-      }
-
-      if (computerProbability[move] > 70) {
-        choices.push(move);
-      }
-    }
-  });
-
-  return randomMove(choices);
-
-}
-
-function updatedProbability (wins, total, computerWon) {
-  if (computerWon) {
-    return Number((((wins + 1) / (total + 1)) * 100).toFixed(2));
-  } else {
-    return Number(((wins / (total + 1)) * 100).toFixed(2));
-  }
-}
 function createComputer() {
   let playerObject = createPlayer();
 
@@ -125,55 +84,92 @@ function createComputer() {
     movesProbability: {
       rock: 0, paper: 0, scissors: 0, lizard: 0, spock: 0,
     },
-    choose() {
-      this.move = weightedChoice(this.historyOfMoves, this.movesProbability);
-      this.updateMove(this.move);
+
+    randomMove (choices) {
+      let randomIndex = Math.floor (Math.random() * choices.length);
+    
+      return choices[randomIndex];
     },
 
-    updateProbability (move, computerWon) {
-      let currentMovePlayed = timesMovePlayed(this.historyOfMoves, move) - 1;
-      let currentMoveSumWins = (currentMovePlayed *
-        this.movesProbability[move] / 100);
+    weightedChoice () {
+      let choices = Object.keys(VALID_CHOICES);
 
-      this.movesProbability[move] = updatedProbability (currentMoveSumWins,
-        currentMovePlayed, computerWon);
+      Object.keys(VALID_CHOICES).forEach(move => {
+        if (this.historyOfMoves.includes(move)) {
+          if (this.movesProbability[move] > 50) {
+            choices.push(move);
+          }
+
+          if (this.movesProbability[move] > 70) {
+            choices.push(move);
+          }
+
+          if (this.movesProbability[move] > 90) {
+            choices.push(move);
+          }
+        }
+      });
+
+      return this.randomMove(choices);
+    },
+
+    choose() {
+      this.move = this.weightedChoice();
+      this.updateMovesHistory(this.move);
+    },
+
+    updateProbability (currentMove, computerWon) {
+      let currentMovePlayed = this.historyOfMoves.filter(move => {
+        return move === currentMove;
+      }).length - 1;
+
+      let currentMoveSumWins = (currentMovePlayed *
+        this.movesProbability[currentMove] / 100);
+      let addWin = 0;
+      if (computerWon) addWin += 1;
+
+      this.movesProbability[currentMove] = Number((((currentMoveSumWins + addWin) / 
+        (currentMovePlayed + 1)) * 100).toFixed(2));
     },
   };
 
   return Object.assign (playerObject, computerObject);
 }
 
-function userChoiceDecipher (choice) {
-  switch (choice) {
-    case 'r':
-      return 'rock';
-    case 'p':
-      return 'paper';
-    case 'sc':
-      return 'scissors';
-    case 'l':
-      return 'lizard';
-    case 'sp':
-      return 'spock';
-    default:
-      return choice;
-  }
-}
-
-function printableChoicesWithShorthands (choices) {
-  return choices.reduce ((accum, value, index) => {
-    if (Object.keys(VALID_CHOICES).includes(value) &&
-    index !== (choices.length / 2) - 1) {
-      return accum + value + `(${choices[index + (choices.length / 2)]}), `;
-    } else if (Object.keys(VALID_CHOICES).includes(value)) {
-      return accum + 'or ' + value + `(${choices[index + 5]})`;
-    } else {
-      return accum;
-    }
-  }, '');
-}
 function createHuman() {
+
   let humanObject = {
+
+    userChoiceDecipher (choice) {
+      switch (choice) {
+        case 'r':
+          return 'rock';
+        case 'p':
+          return 'paper';
+        case 'sc':
+          return 'scissors';
+        case 'l':
+          return 'lizard';
+        case 'sp':
+          return 'spock';
+        default:
+          return choice;
+      }
+    },
+
+    printableChoicesWithShorthands(choices) {
+      return choices.reduce ((accum, value, index) => {
+        if (Object.keys(VALID_CHOICES).includes(value) &&
+        index !== (choices.length / 2) - 1) {
+          return accum + value + `(${choices[index + (choices.length / 2)]}), `;
+        } else if (Object.keys(VALID_CHOICES).includes(value)) {
+          return accum + 'or ' + value + `(${choices[index + 5]})`;
+        } else {
+          return accum;
+        }
+      }, '');
+    },
+
     choose() {
       let choice;
 
@@ -182,41 +178,39 @@ function createHuman() {
           Object.keys(VALID_CHOICES).map (key => {
             return VALID_CHOICES[key].shorthand;
           }));
-        prompt(`Please choose ${printableChoicesWithShorthands(choices)}.`);
+        prompt(`Please choose ${this.printableChoicesWithShorthands(choices)}.`);
         choice = readline.question().toLowerCase();
         if (choices.includes(choice)) break;
         prompt('Sorry, invalid choice.');
       }
-      this.move = userChoiceDecipher(choice);
-      this.updateMove(this.move);
+      this.move = this.userChoiceDecipher(choice);
+      this.updateMovesHistory(this.move);
     }
   };
 
   return Object.assign(createPlayer(), humanObject);
 }
 
-let compare = function (humanMove, computerMove) {
-  // not yet implemented
-  if (humanMove === computerMove) {
-    return 'tie';
-  } else if (VALID_CHOICES[humanMove].beats.includes(computerMove)) {
-    return 'human';
-  } else {
-    return 'computer';
-  }
-};
-
-
 const RPSGame = {
   human: createHuman(),
   computer: createComputer(),
+
+  compare(humanMove, computerMove) {
+    if (humanMove === computerMove) {
+      return 'tie';
+    } else if (VALID_CHOICES[humanMove].beats.includes(computerMove)) {
+      return 'human';
+    } else {
+      return 'computer';
+    }
+  },
 
   displayRules() {
     prompt ('This game is an extended version of the simple game rock, paper, scissors.');
     prompt ('Below are the rules:');
     prompt ('SCissors cuts Paper covers Rock crushes Lizard posions SPock smashes SCissors');
     prompt ('decapitates Lizard eats Paper disproves SPock vaporizes Rock crushes SCissors.');
-    prompt ('Click any button to continue');
+    prompt ('Click Enter/Return to continue');
     readline.question();
     console.clear();
   },
@@ -244,7 +238,7 @@ const RPSGame = {
   },
 
   displaySetWinner() {
-    let setWinner = compare(this.human.move, this.computer.move);
+    let setWinner = this.compare(this.human.move, this.computer.move);
 
     prompt(`You chose: ${this.human.move}`);
     prompt(`The computer chose: ${this.computer.move}`);
@@ -265,16 +259,20 @@ const RPSGame = {
   displayGameWinner() {
     let humanScore = this.human.score;
 
-    if (humanScore === 5) {
+    if (humanScore === WINNING_SCORE) {
       prompt('You win the game!!!!!');
+      prompt ('Click Enter/Return to continue');
+      readline.question();
     } else {
       prompt('Computer wins the game!!!!!');
+      prompt ('Click Enter/Return to continue');
+      readline.question();
     }
   },
 
   displayScore() {
     prompt(`The current score is \n=> YOU: ${this.human.score} \n=> COMPUTER: ${this.computer.score}`);
-    prompt(`Press any button to continue`);
+    prompt(`Press Enter/Return to continue`);
     readline.question();
     console.clear();
   },
@@ -288,12 +286,13 @@ const RPSGame = {
     for (let index = 0; index < setsPlayed; index++) {
       let humanMove = humanMoves[index];
       let computerMove = computerMoves[index];
-      let setWinner = compare (humanMove, computerMove);
+      let setWinner = this.compare (humanMove, computerMove);
       let winner = setWinner !== 'tie' ? `${setWinner} won` : `It was a tie`;
 
-      prompt (`Set ${index + 1}: Human chose ${humanMove}, Computer chose ${computerMove}. ${winner}`);
+      prompt (`Set ${index + 1}: you chose ${humanMove}, Computer chose ${computerMove}. ${winner}`);
     }
   },
+
   playAgain() {
     let answer;
     while (true) {
@@ -309,12 +308,13 @@ const RPSGame = {
   },
 
   play() {
+    console.clear();
     this.displayWelcomeMessage();
     while (true) {
       this.human.resetScore();
       this.computer.resetScore();
 
-      while (this.human.score < 5 && this.computer.score < 5) {
+      while (this.human.score < WINNING_SCORE && this.computer.score < WINNING_SCORE) {
         this.human.choose();
         this.computer.choose();
         this.displaySetWinner();
