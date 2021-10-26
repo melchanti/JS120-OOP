@@ -87,7 +87,6 @@ function createComputer() {
 
     randomMove (choices) {
       let randomIndex = Math.floor (Math.random() * choices.length);
-    
       return choices[randomIndex];
     },
 
@@ -128,8 +127,8 @@ function createComputer() {
       let addWin = 0;
       if (computerWon) addWin += 1;
 
-      this.movesProbability[currentMove] = Number((((currentMoveSumWins + addWin) / 
-        (currentMovePlayed + 1)) * 100).toFixed(2));
+      this.movesProbability[currentMove] = Number((((currentMoveSumWins +
+        addWin) / (currentMovePlayed + 1)) * 100).toFixed(2));
     },
   };
 
@@ -314,7 +313,9 @@ const RPSGame = {
       this.human.resetScore();
       this.computer.resetScore();
 
-      while (this.human.score < WINNING_SCORE && this.computer.score < WINNING_SCORE) {
+      while (this.human.score < WINNING_SCORE &&
+        this.computer.score < WINNING_SCORE) {
+
         this.human.choose();
         this.computer.choose();
         this.displaySetWinner();
