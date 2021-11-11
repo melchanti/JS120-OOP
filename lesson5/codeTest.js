@@ -1,6 +1,6 @@
 function joinOr(array, delimeter = ', ', joining = 'or') {
-  let stringExceptLast = array.slice(0,array.length - 1).join(delimeter) + ` ${joining} ${array[array.length - 1]}`
-  console.log (stringExceptLast);
+  return array.slice(0,array.length - 1).join(delimeter) + 
+  ` ${joining} ${array[array.length - 1]}`;
 }
 
 joinOr([1, 2])                   // => "1 or 2"
