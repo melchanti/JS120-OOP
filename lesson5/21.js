@@ -59,9 +59,9 @@ class Deck {
     this.cards = [];
     let suits = ['H', 'S', 'D', 'C'];
     let numbers = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-    suits.forEach (suit => {
-      numbers.forEach (number => {
-        this.cards.push (new Card(suit, number));
+    suits.forEach(suit => {
+      numbers.forEach(number => {
+        this.cards.push(new Card(suit, number));
       });
     });
     this.shuffle();
@@ -81,6 +81,7 @@ class Deck {
 
 class Participant {
   static INITIAL_SCORE = 0;
+  static MAX_SCORE = 21;
 
   constructor() {
     this.hand = [];
@@ -108,14 +109,14 @@ class Participant {
   }
 
   calculateScore() {
-    let sum = this.hand.reduce ((accum, card) => {
+    let sum = this.hand.reduce((accum, card) => {
       accum += card.cardValue();
       return accum;
     }, 0);
-    let cardsWithAce = this.hand.filter (card => card.getRank() === 'A');
+    let cardsWithAce = this.hand.filter(card => card.getRank() === 'A');
 
     cardsWithAce.forEach (_ => {
-      if (sum > 21) sum -= 10;
+      if (sum > Participant.MAX_SCORE) sum -= 10;
     });
     this.score = sum;
   }
@@ -127,11 +128,15 @@ class Participant {
   }
 
   isBusted() {
-    return this.score > 21;
+    return this.score > Participant.MAX_SCORE;
   }
 
   reinitalize() {
     this.hand = [];
+  }
+
+  isMaxScore() {
+    return this.score === Participant.MAX_SCORE;
   }
 }
 
@@ -151,11 +156,13 @@ class Player extends Participant {
   }
 
   updateMoney(value) {
-    this.money = this.money + value;
+    this.money += value;
   }
 }
 
 class Dealer extends Participant {
+  static MIN_SCORE = 17;
+
   showOneCard() {
     return this.hand[0];
   }
@@ -171,18 +178,26 @@ class TwentyOneGame {
   start() {
     console.clear();
     this.displayWelcomeMessage();
+    prompt (`You've $${this.player.getMoney()} to start with.`);
+
     while (true) {
-      this.dealCards();
-      this.showCards();
-      this.playerTurn();
-      if (!this.player.isBusted()) {
-        this.dealerTurn();
-      }
-      this.displayRoundResults();
+      this.playOneRound();
       if (!this.playAgain()) break;
       this.reinitalize();
     }
     this.displayGoodbyeMessage();
+  }
+
+  moneyLimit() {
+    if (this.player.getMoney() === 0) {
+      prompt ("You don't have any more money. GAME OVER!");
+      return false;
+    } else if (this.player.getMoney() === 10) {
+      prompt ("You have $10!!! That's the maximum you can win today");
+      return false;
+    } else {
+      return true;
+    }
   }
 
   playAgain() {
@@ -191,18 +206,14 @@ class TwentyOneGame {
     const VALID_YES_NO = ['yes', 'no', 'y', 'n'];
     let choice;
 
-    if (this.player.getMoney() === 0) {
-      prompt ("You don't have any more money. GAME OVER!");
-      return false;
-    } else if (this.player.getMoney() === 10) {
-      prompt ("You have $10!!! That's the maximum you can win today");
+    if (!this.moneyLimit()) {
       return false;
     }
+
     prompt (`You've $${this.player.getMoney()} left.`);
-    
     while (true) {
       prompt ('Would you like to play again?');
-      choice = readline.question().toLowerCase('=> ');
+      choice = readline.question('=> ').toLowerCase();
 
       if (VALID_YES_NO.includes(choice)) break;
       prompt ("You've entered an invalid answer");
@@ -213,12 +224,12 @@ class TwentyOneGame {
 
   playOneRound() {
     this.dealCards();
-    this.showCards();
-    this.playerTurn();
-    if (!this.player.isBusted()) {
-      this.dealerTurn();
-    }
-    this.displayRoundResults();
+      this.showCards();
+      this.playerTurn();
+      if (!this.player.isBusted() && !this.player.isMaxScore()) {
+        this.dealerTurn();
+      }
+      this.displayRoundResults();
   }
 
   reinitalize() {
@@ -256,11 +267,11 @@ class TwentyOneGame {
     }
   }
 
-  playerHit () {
+  playerHit() {
     let choice;
     const VALID_HIT_OR_STAY = ['hit', 'stay', 'h', 's'];
     while (true) {
-      prompt ('Would you like to hit or stay');
+      prompt('Would you like to hit or stay');
       choice = readline.question('=> ').toLowerCase();
       console.clear();
       if (VALID_HIT_OR_STAY.includes(choice)) break;
@@ -272,7 +283,7 @@ class TwentyOneGame {
   }
 
   playerTurn() {
-    while (!this.player.isBusted() && this.playerHit()) {
+    while (!this.player.isBusted() && !this.player.isMaxScore() && this.playerHit()) {
       console.clear();
       prompt ("You've chosen to hit.");
       this.player.hit(this.deck.deal());
@@ -281,12 +292,14 @@ class TwentyOneGame {
 
     if (this.player.isBusted()) return;
 
+    if (this.player.isMaxScore()) return;
+
     prompt ("You've chosen to stay.");
     this.showCards('dealer');
   }
 
   dealerTurn() {
-    while (!this.dealer.isBusted() && this.dealer.getScore() < 17) {
+    while (!this.dealer.isBusted() && this.dealer.getScore() < Dealer.MIN_SCORE) {
       console.clear();
       this.dealer.hit(this.deck.deal());
       this.showCards('dealer');
@@ -294,32 +307,39 @@ class TwentyOneGame {
   }
 
   displayWelcomeMessage() {
-    prompt ('Welcome to 21 where the goal is to win!!!');
+    prompt ('Welcome to TWENTY-ONE where the goal is to win!!!');
   }
 
   displayGoodbyeMessage() {
-    prompt ('Thank you for playing 21, hope you join us again!!!');
+    prompt ('Thank you for playing TWENTY-ONE, hope you join us again!!!');
   }
 
   displayRoundResults() {
     if (this.player.isBusted()) {
-      prompt("You've busted!");
-      prompt ("Dealer won!!!");
+      prompt("You've busted!\n=> Dealer won!!!");
       this.player.updateMoney(-1);
+    } else if (this.player.isMaxScore()) {
+      prompt(`You've hit ${Participant.MAX_SCORE}, congratualtions you win!!!`);
+      this.player.updateMoney(1);
     } else if (this.dealer.isBusted()) {
-      prompt('Dealer has busted');
-      prompt("You've won congratulations!!!");
+      prompt("Dealer has busted\n=> You've won congratulations!!!");
       this.player.updateMoney(1);
     } else {
-      prompt (`Your score is ${this.player.getScore()}.`);
-      prompt (`Dealer score is ${this.dealer.getScore()}.`);
-      if (this.player.getScore() > this.dealer.getScore()) {
-        this.player.updateMoney(1);
-        prompt("You've won!!! Congratulations");
-      } else {
-        this.player.updateMoney(-1);
-        prompt ("Dealer won!!! YOU LOSE!!!");
-      }
+      this.displayRoundScores();
+    }
+  }
+
+  displayRoundScores() {
+    prompt (`Your score is ${this.player.getScore()}.`);
+    prompt (`Dealer score is ${this.dealer.getScore()}.`);
+    if (this.player.getScore() > this.dealer.getScore()) {
+      this.player.updateMoney(1);
+      prompt("You've won!!! Congratulations");
+    } else if (this.player.getScore() < this.dealer.getScore()) {
+      this.player.updateMoney(-1);
+      prompt ("Dealer won!!! YOU LOSE!!!");
+    } else {
+      prompt("It's a tie");
     }
   }
 }
