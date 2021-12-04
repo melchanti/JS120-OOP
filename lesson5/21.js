@@ -224,12 +224,12 @@ class TwentyOneGame {
 
   playOneRound() {
     this.dealCards();
-      this.showCards();
-      this.playerTurn();
-      if (!this.player.isBusted() && !this.player.isMaxScore()) {
-        this.dealerTurn();
-      }
-      this.displayRoundResults();
+    this.showCards();
+    this.playerTurn();
+    if (!this.player.isBusted() && !this.player.isMaxScore()) {
+      this.dealerTurn();
+    }
+    this.displayRoundResults();
   }
 
   reinitalize() {
@@ -283,7 +283,8 @@ class TwentyOneGame {
   }
 
   playerTurn() {
-    while (!this.player.isBusted() && !this.player.isMaxScore() && this.playerHit()) {
+    while (!this.player.isBusted() && !this.player.isMaxScore()
+      && this.playerHit()) {
       console.clear();
       prompt ("You've chosen to hit.");
       this.player.hit(this.deck.deal());
@@ -299,7 +300,8 @@ class TwentyOneGame {
   }
 
   dealerTurn() {
-    while (!this.dealer.isBusted() && this.dealer.getScore() < Dealer.MIN_SCORE) {
+    while (!this.dealer.isBusted() &&
+      this.dealer.getScore() < Dealer.MIN_SCORE) {
       console.clear();
       this.dealer.hit(this.deck.deal());
       this.showCards('dealer');
